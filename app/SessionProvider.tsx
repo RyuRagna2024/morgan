@@ -5,8 +5,6 @@ import { Session as LuciaSession } from "lucia";
 
 export type UserRole = "USER" | "CUSTOMER" | "ADMIN";
 
-export type UserTier = "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
-
 export interface SessionUser {
   id: string;
   username: string;
