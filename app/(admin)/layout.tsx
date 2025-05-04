@@ -2,8 +2,8 @@ import { validateRequest } from "@/auth";
 import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
 import { UserRole } from "@prisma/client";
-import Navbar from "../_components/Navbar";
-import Footer from "../_components/Footer";
+import Navbar from "../../components/layout/Header";
+import Footer from "../../components/layout/Footer";
 import SessionProvider from "../SessionProvider";
 
 export const dynamic = "force-dynamic";

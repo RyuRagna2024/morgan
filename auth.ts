@@ -1,9 +1,11 @@
+// auth.ts (Revised - Cookie Setting Removed from validateRequest)
+
 import { PrismaAdapter } from "@lucia-auth/adapter-prisma";
 import { Google } from "arctic";
 import { Lucia, Session, User } from "lucia";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import prisma from "./lib/prisma";
+import prisma from "./lib/prisma"; // Ensure this path is correct
 import { UserRole } from "@prisma/client";
 
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
@@ -23,6 +25,7 @@ export const lucia = new Lucia(adapter, {
   sessionCookie: {
     expires: false,
     attributes: {
+      // Ensure this matches your environment, 'true' for production deployments
       secure: process.env.NODE_ENV === "production",
     },
   },
@@ -46,17 +49,24 @@ declare module "lucia" {
   }
 }
 
+// Ensure environment variables are loaded correctly for these
 export const google = new Google(
   process.env.GOOGLE_CLIENT_ID!,
   process.env.GOOGLE_CLIENT_SECRET!,
-  `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/google`
+  // Ensure this URL is correct for your setup
+  `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/callback/google`,
 );
 
+// This function now only reads the cookie and validates the session.
+// Cookie setting/clearing is handled by middleware.ts
 export const validateRequest = cache(
   async (): Promise<
     { user: User; session: Session } | { user: null; session: null }
   > => {
-    const sessionId = cookies().get(lucia.sessionCookieName)?.value ?? null;
+    // Await cookies() to get the store
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get(lucia.sessionCookieName)?.value ?? null;
+
     if (!sessionId) {
       return {
         user: null,
@@ -64,26 +74,12 @@ export const validateRequest = cache(
       };
     }
 
+    // Validate the session ID
     const result = await lucia.validateSession(sessionId);
-    try {
-      if (result.session && result.session.fresh) {
-        const sessionCookie = lucia.createSessionCookie(result.session.id);
-        cookies().set(
-          sessionCookie.name,
-          sessionCookie.value,
-          sessionCookie.attributes
-        );
-      }
-      if (!result.session) {
-        const sessionCookie = lucia.createBlankSessionCookie();
-        cookies().set(
-          sessionCookie.name,
-          sessionCookie.value,
-          sessionCookie.attributes
-        );
-      }
-    } catch {}
 
-    return result;
-  }
+    // Removed the try...catch block that previously handled cookie setting.
+    // Middleware.ts is now responsible for refreshing/clearing cookies.
+
+    return result; // Return the validation result directly
+  },
 );

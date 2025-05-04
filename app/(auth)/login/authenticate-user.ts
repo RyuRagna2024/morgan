@@ -1,24 +1,27 @@
 "use server";
 
-import { lucia } from "@/auth";
+import { lucia } from "@/auth"; // Assuming auth.ts is aliased correctly
 import prisma from "@/lib/prisma";
 import { verify } from "@node-rs/argon2";
-import { isRedirectError } from "next/dist/client/components/redirect";
+// Removed getRedirectError, stick with isRedirectError from redirect-error
+// import { getRedirectError } from "next/dist/client/components/redirect";
+import { isRedirectError } from "next/dist/client/components/redirect-error"; // Keep this one
 import { cookies } from "next/headers";
 import { UserRole } from "@prisma/client";
-import { LoginFormValues } from "./validations";
+import { LoginFormValues } from "./validations"; // Assuming this path is correct
 
 const roleRoutes: Record<UserRole, string> = {
   [UserRole.USER]: "/register-success",
-  [UserRole.CUSTOMER]: "/",
-  [UserRole.ADMIN]: "/",
+  [UserRole.CUSTOMER]: "/", // Redirect logged-in CUSTOMER to home
+  [UserRole.ADMIN]: "/", // Redirect logged-in ADMIN to home (or an admin dashboard)
 } as const;
 
 export async function login(credentials: LoginFormValues): Promise<{
   error?: string;
   redirectTo?: string;
-  sessionCreated?: boolean;
-} | void> {
+  sessionCreated?: boolean; // Added this return property
+}> {
+  // Removed ' | void' as we always return an object or throw
   try {
     const { email, password } = credentials;
 
@@ -32,9 +35,8 @@ export async function login(credentials: LoginFormValues): Promise<{
     });
 
     if (!existingUser || !existingUser.passwordHash) {
-      return {
-        error: "Invalid email or password",
-      };
+      // Generic error to prevent account enumeration
+      return { error: "Invalid email or password" };
     }
 
     const validPassword = await verify(existingUser.passwordHash, password, {
@@ -45,60 +47,54 @@ export async function login(credentials: LoginFormValues): Promise<{
     });
 
     if (!validPassword) {
-      return {
-        error: "Invalid email or password",
-      };
+      return { error: "Invalid email or password" };
     }
 
     let sessionCreated = false;
 
-    // Only create session if the user role is NOT UserRole.USER
-    if (existingUser.role !== UserRole.USER) {
-      try {
-        // Create session in the database
-        const dbSession = await prisma.session.create({
-          data: {
-            id: crypto.randomUUID(),
-            userId: existingUser.id,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          },
-        });
+    // Always create session for valid login, role check is for redirect path
+    try {
+      // Use Lucia to create the session directly, it handles DB and cookie creation
+      const session = await lucia.createSession(existingUser.id, {});
+      const sessionCookie = lucia.createSessionCookie(session.id);
 
-        const sessionCookie = lucia.createSessionCookie(dbSession.id);
-        cookies().set(
-          sessionCookie.name,
-          sessionCookie.value,
-          sessionCookie.attributes,
-        );
+      // --- FIX: Await cookies() before setting ---
+      const cookieStore = await cookies();
+      cookieStore.set(
+        sessionCookie.name,
+        sessionCookie.value,
+        sessionCookie.attributes,
+      );
+      // ------------------------------------------
 
-        // Add a small delay to ensure session is properly set
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        sessionCreated = true;
-      } catch (sessionError) {
-        console.error("Session creation error:", sessionError);
-        return {
-          error: "Failed to create session. Please try again.",
-        };
-      }
+      sessionCreated = true;
+    } catch (sessionError) {
+      console.error("Session creation/setting error:", sessionError);
+      // Don't necessarily expose internal errors directly to user
+      return { error: "Login failed. Please try again." };
     }
 
+    // Determine redirect path based on role
     const redirectPath = roleRoutes[existingUser.role];
     if (!redirectPath) {
+      // Should ideally not happen if roles are managed correctly
+      console.error(`No redirect path defined for role: ${existingUser.role}`);
       return {
-        error: "Unable to determine user access. Please contact support.",
+        error: "Login successful, but could not determine destination.",
       };
     }
 
-    return {
-      redirectTo: redirectPath,
-      sessionCreated,
-    };
+    // Return success state with redirect path
+    return { redirectTo: redirectPath, sessionCreated };
   } catch (error) {
-    if (isRedirectError(error)) throw error;
-    console.error("Login error:", error);
-    return {
-      error: "Something went wrong. Please try again.",
-    };
+    // --- FIX: Correctly handle potential redirect errors ---
+    if (isRedirectError(error)) {
+      // If Lucia internally uses redirect (less common now) or you add one, re-throw it
+      throw error;
+    }
+    // -------------------------------------------------------
+
+    console.error("Unhandled login error:", error);
+    return { error: "An unexpected error occurred. Please try again." };
   }
 }

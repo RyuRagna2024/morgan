@@ -1,8 +1,8 @@
 import { validateRequest } from "@/auth";
 import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
-import Navbar from "../_components/Navbar";
-import Footer from "../_components/Footer";
+import Navbar from "../../components/layout/Header";
+import Footer from "../../components/layout/Footer";
 import SessionProvider from "../SessionProvider";
 
 // Enum matching your Prisma schema

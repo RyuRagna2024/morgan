@@ -1,8 +1,13 @@
+// tailwind.config.ts
+
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
+// No changes to imports
+
 export default {
-  darkMode: ["class"],
+  // Change this from ["class"] to 'class'
+  darkMode: "class", // <--- FIX: Use string 'class'
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,6 +15,7 @@ export default {
   ],
   theme: {
     extend: {
+      // Colors section should be correct based on your previous file
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

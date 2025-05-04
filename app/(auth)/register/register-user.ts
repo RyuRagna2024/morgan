@@ -2,13 +2,13 @@
 
 import prisma from "@/lib/prisma";
 import { hash } from "@node-rs/argon2";
-import { isRedirectError } from "next/dist/client/components/redirect";
 import { redirect } from "next/navigation";
 import { Prisma, UserRole } from "@prisma/client";
 import { RegisterFormValues, registerSchema } from "./validation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export async function signUp(
-  formData: RegisterFormValues
+  formData: RegisterFormValues,
 ): Promise<{ error?: string } | never> {
   try {
     const validatedData = registerSchema.parse(formData);

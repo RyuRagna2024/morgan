@@ -1,9 +1,15 @@
+// prisma/schema.prisma
+
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "prismaSchemaFolder"]
+  // Add "driverAdapters" to the existing list
+  previewFeatures = ["fullTextSearch", "prismaSchemaFolder", "driverAdapters"] // <-- Added here
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// This file might also contain imports for your other schema files
+// if you are using the prismaSchemaFolder feature. No changes needed there.

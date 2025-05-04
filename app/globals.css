@@ -1,15 +1,17 @@
+/* app/globals.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Optional utility class you had */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
 }
 
-
-
+/* Base styles including Shadcn UI variables */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -66,13 +68,12 @@
   }
 }
 
-
-
+/* Apply base background and text color to the body */
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground;
+    /* Ensure font-feature-settings are applied if needed */
+    /* font-feature-settings: "rlig" 1, "calt" 1; */
   }
+  /* REMOVED the problematic rule: * { @apply border-border; } */
 }
